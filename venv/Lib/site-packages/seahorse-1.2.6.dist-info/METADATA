@@ -1,0 +1,72 @@
+Metadata-Version: 2.5
+Name: seahorse
+Version: 1.2.6
+Project-URL: Documentation, https://github.com/corail-research/seahorse#readme
+Project-URL: Issues, https://github.com/corail-research/seahorse/issues
+Project-URL: Source, https://github.com/corail-research/seahorse
+Author-email: Corail-research-group <quentin.cappart@polymtl.ca>
+License-Expression: BSD-3-Clause
+License-File: LICENSE
+Classifier: Development Status :: 4 - Beta
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Requires-Python: >=3.11
+Requires-Dist: aiohttp
+Requires-Dist: aioprocessing[dill]
+Requires-Dist: asyncio
+Requires-Dist: loguru
+Requires-Dist: nest-asyncio
+Requires-Dist: python-socketio
+Requires-Dist: split
+Description-Content-Type: text/markdown
+
+<img width="70%" src="https://raw.githubusercontent.com/corail-research/seahorse/main/assets/logo_seahorse.png" />
+
+[![PyPI - Version](https://img.shields.io/pypi/v/seahorse.svg)](https://pypi.org/project/seahorse)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/seahorse.svg)](https://pypi.org/project/seahorse)
+[![License](https://img.shields.io/github/license/corail-research/seahorse)](https://opensource.org/license/bsd-3-clause/)
+[![Tests](https://github.com/corail-research/seahorse/actions/workflows/python-testing.yml/badge.svg)](https://github.com/corail-research/seahorse/actions/workflows/python-testing.yml)
+[![Stars](https://img.shields.io/github/stars/corail-research/seahorse)](https://github.com/corail-research/seahorse/stargazers)
+
+# A handy package for kickstarting AI game environments.
+
+## ✨ Why Seahorse?
+Developing a game environnement for autonomous agents is complex.
+Seahorse is a lightweight Python framework for building turn‑based adversarial games and running matches with AI agents.
+This package is battle-tested and tailored to educational use cases
+
+- **Define your own game** – describe the states, rules, possible moves, and winning condition.
+- **Plug in any agent** – implement the decision logic once.
+- **Interaction via proxies** - agents can compete whether they are all run locally or on another machine. human can also play against agent through an interactive GUI.
+- **Let the master run the match** – the built‑in game master enforces turn order, time budgets, move legality, and determines winners.
+- **Real‑time communication** – a server broadcasts game states and collects actions, making remote play and live recording effortless.
+
+## 📦 Installation
+
+```bash
+pip install seahorse
+```
+
+## 📖 Documentation & Examples
+
+For detailed tutorials, references, and advanced examples, please visit our full documentation: **[corail-research.github.io/seahorse/](https://corail-research.github.io/seahorse/)**
+
+## 🤝 Contributing
+
+We welcome contributions!
+If you encounter a bug, have a feature request, or want to improve the documentation, please fork the repository and open a pull request.
+
+## Main contributors
+We are an enthusiastic team of M.Sc. and PhD candidates led by Pr. Quentin Cappart at Polytechnique Montréal.
+The package was originally developed in the context of an introductory course to artificial intelligence given to computer and software engineering students.
+
+## License
+
+`seahorse` is distributed under the **BSD 3‑Clause License**. See the [`LICENSE`](LICENSE) file for details.
+
+<div class="horizontal-container" style="display:inline-block; width:100%"> <p><img src="https://raw.githubusercontent.com/corail-research/seahorse/main/docs/assets/corail-logo.png" width=400/><img src="https://raw.githubusercontent.com/corail-research/seahorse/main/docs/assets/logo_poly.png" width=150/></p>
+</p>  </div>
