@@ -1,4 +1,9 @@
+# INF8175 - Projet Quoridor
+# Marouane Istadad - 2346401
+# Asmaa Sabouri - 2224168
+
 import math
+from collections import deque
 from collections.abc import Iterator
 from time import perf_counter
 
@@ -7,12 +12,27 @@ from game_state_quoridor import GameStateQuoridor
 from player_quoridor import PlayerQuoridor
 from seahorse.game.action import Action
 from seahorse.game.stateless_action import StatelessAction
+from seahorse.player.player import Player
 
 
 class MyPlayer(PlayerQuoridor):
-    """Joueur utilisant minimax avec élagage alpha-bêta."""
+    """Joueur utilisant minimax avec élagage alpha-bêta.
 
-    MAX_DEPTH = 3
+    V2 (par rapport à la V1) :
+      - Génération des murs restreinte aux positions "utiles" : seuls les
+        murs qui touchent le plus court chemin d'au moins un des deux
+        joueurs sont considérés, au lieu de tester systématiquement les
+        ~150 positions du plateau à chaque nœud. Un mur qui ne touche
+        aucun des deux chemins ne peut pas changer la distance restante
+        d'un joueur, il est donc inutile de l'explorer. Cela réduit très
+        fortement le facteur de branchement et permet une recherche plus
+        profonde dans le même budget de temps.
+      - Heuristique enrichie d'un terme de mobilité (nombre de cases
+        immédiatement accessibles par chaque joueur), en plus de la
+        distance au but et de l'avantage en murs restants.
+    """
+
+    MAX_DEPTH = 4
     MAX_TIME_PER_MOVE = 5.0
 
     def __init__(self, piece_type: str, goal_row: int = 0, name: str = "bob", *args, **kwargs) -> None:
@@ -93,7 +113,9 @@ class MyPlayer(PlayerQuoridor):
         return best_value, best_action
 
     def evaluate(self, state: GameStateQuoridor) -> float:
-        """Favorise un chemin court vers notre but et un long chemin adverse."""
+        """Favorise un chemin court vers notre but, un long chemin adverse,
+        un avantage en murs restants et une bonne mobilité immédiate.
+        """
         player = next(p for p in state.players if p.get_id() == self.get_id())
         opponent = next(p for p in state.players if p.get_id() != self.get_id())
 
@@ -102,7 +124,6 @@ class MyPlayer(PlayerQuoridor):
         if state.scores[opponent.get_id()] == 1.0:
             return -math.inf
 
-        
         own_distance = state._shortest_path(player)
         opponent_distance = state._shortest_path(opponent)
         if own_distance is None:
@@ -114,7 +135,18 @@ class MyPlayer(PlayerQuoridor):
             state.rep.remaining_walls[player.get_id()]
             - state.rep.remaining_walls[opponent.get_id()]
         )
-        return opponent_distance - own_distance + 0.1 * wall_advantage
+
+        # Nombre de cases immédiatement accessibles : un joueur acculé
+        # (peu d'options) est en plus mauvaise posture qu'un simple écart
+        # de distance ne le laisse paraître.
+        own_mobility = len(state._reachable_neighbours(state.rep.pawn_positions[player.get_id()]))
+        opponent_mobility = len(state._reachable_neighbours(state.rep.pawn_positions[opponent.get_id()]))
+
+        return (
+            (opponent_distance - own_distance)
+            + 0.15 * wall_advantage
+            + 0.05 * (own_mobility - opponent_mobility)
+        )
 
     def _legal_actions(self, state: GameStateQuoridor, deadline: float) -> Iterator[StatelessAction]:
         """Énumère tous les coups légaux en vérifiant régulièrement le temps."""
@@ -130,17 +162,65 @@ class MyPlayer(PlayerQuoridor):
         if state.rep.remaining_walls[state.active_player.get_id()] <= 0:
             return
 
-        
-        for row in range(state.rep.dimension):
-            for col in range(state.rep.dimension):
-                for orientation in Orientation:
-                    self._check_time(deadline)
-                    wall = Wall(row, col, orientation)
-                    if state._is_wall_legal(wall):
-                        yield StatelessAction({
-                            "type": "horizontal" if orientation == Orientation.HORIZONTAL else "vertical",
-                            "destination": (row, col),
-                        })
+        for wall in self._candidate_walls(state, deadline):
+            self._check_time(deadline)
+            if state._is_wall_legal(wall):
+                yield StatelessAction({
+                    "type": "horizontal" if wall.orientation == Orientation.HORIZONTAL else "vertical",
+                    "destination": (wall.row, wall.col),
+                })
+
+    def _candidate_walls(self, state: GameStateQuoridor, deadline: float) -> set[Wall]:
+        """Restreint les murs à ceux qui touchent le plus court chemin d'au
+        moins un des deux joueurs.
+
+        Un mur qui ne touche ni l'un ni l'autre chemin ne peut pas modifier
+        la distance restante d'un joueur ; il est donc inutile de
+        l'explorer. Cela réduit le facteur de branchement d'environ 150
+        positions à quelques dizaines, ce qui permet d'augmenter la
+        profondeur de recherche.
+        """
+        candidates: set[Wall] = set()
+        for player in state.players:
+            path = self._shortest_path_cells(state, player, deadline)
+            if path is None:
+                continue
+            for start, end in zip(path, path[1:]):
+                candidates.update(state._candidate_blocking_walls(start, end))
+        return candidates
+
+    def _shortest_path_cells(
+        self, state: GameStateQuoridor, player: Player, deadline: float,
+    ) -> list[tuple[int, int]] | None:
+        """BFS retournant le plus court chemin (liste de cases) d'un joueur
+        vers son but, en ignorant le pion adverse (comme state._shortest_path).
+        """
+        start = state.rep.pawn_positions[player.id]
+        if start[0] == player.get_goal_row():
+            return [start]
+
+        queue = deque([start])
+        visited = {start}
+        parents: dict[tuple[int, int], tuple[int, int]] = {}
+
+        while queue:
+            self._check_time(deadline)
+            position = queue.popleft()
+            if position[0] == player.get_goal_row():
+                path = [position]
+                while position in parents:
+                    position = parents[position]
+                    path.append(position)
+                path.reverse()
+                return path
+
+            for neighbour in state._reachable_neighbours(position):
+                if neighbour not in visited:
+                    visited.add(neighbour)
+                    parents[neighbour] = position
+                    queue.append(neighbour)
+
+        return None
 
     @staticmethod
     def _check_time(deadline: float) -> None:
